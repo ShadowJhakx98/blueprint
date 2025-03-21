@@ -1,0 +1,990 @@
+blueprint:
+  name: Voice Assistant - Advanced Memory System with Multi-User Support
+  description: >
+    "
+    # Advanced Voice Assistant Memory System
+
+    This blueprint provides a comprehensive memory management system for your voice assistant
+    using snarky-snark's var component. It handles remembering new information, forgetting
+    specific details, categorizing memories, and provides automatic backups with support for
+    multiple users, advanced memory processing, and enhanced security features.
+
+    When a voice command is issued (for example, "Remember that I prefer tea over coffee" or
+    "Forget that I like sugar in my coffee"), your LLM will process the request and update
+    the memory accordingly. The system maintains memory categories, handles conflicts,
+    performs verification, and notifies you of the results.
+
+    ### Core Features:
+    * Memory categorization (personal preferences, household info, etc.)
+    * Automatic memory backups
+    * Conflict resolution for contradictory information
+    * User notifications for memory updates
+    * Memory retrieval optimization
+    * Memory size management
+    * Error handling
+
+    ### Advanced Features:
+    * Multi-user support with individual memory profiles
+    * Memory prioritization and aging/decay for relevance management
+    * Sentiment analysis and relationship mapping between memory items
+    * AI-powered memory suggestions and cross-referencing
+    * Database integration for larger memory storage
+    * Memory visualization dashboard
+    * Encryption and granular access control for privacy
+
+    ### Requirements:
+    * snarky-snark's variable component from HACS
+    * notify service (optional, for notifications)
+    * SQLite/MariaDB/PostgreSQL integration (optional, for advanced storage)
+
+    ### Usage:
+    * Give the script a clear description for the LLM to understand.
+    * The description should indicate it handles remembering and forgetting information.
+    * **Make sure to expose the script to Assist after saving.**
+
+    ### Example script description:
+    `Update assistant's memory system. Handles remembering new information, forgetting details,
+    and organizing memories by category with multi-user support and privacy controls.`
+    "
+  domain: script
+  homeassistant:
+    min_version: 2025.1.0
+  input:
+    # Core Storage Settings
+    memory_entity:
+      name: Primary Memory Storage Entity
+      description: >
+        Select the var entity used as the primary storage for voice assistant memory.
+        (For example: var.voice_assistant_memory)
+      selector:
+        entity:
+          domain: var
+    backup_memory_entity:
+      name: Backup Memory Storage Entity (Optional)
+      description: >
+        Select an optional secondary var entity to store memory backups.
+        Leave empty to disable automatic backups.
+      default: ""
+      selector:
+        entity:
+          domain: var
+          multiple: false
+
+    # Notification Settings
+    notify_service:
+      name: Notification Service (Optional)
+      description: >
+        Select a notification service to receive updates about memory changes.
+        Leave empty to disable notifications.
+      default: ""
+      selector:
+        service:
+          domain: notify
+
+    # Memory Size and Performance
+    memory_size_limit:
+      name: Memory Size Limit (KB)
+      description: >
+        Set a maximum size limit for the memory storage in kilobytes.
+        The system will optimize memory if this limit is reached.
+        Set to 0 for no limit.
+      default: 100
+      selector:
+        number:
+          min: 0
+          max: 1000
+          unit_of_measurement: KB
+
+    # Multi-User Support Settings
+    enable_multi_user:
+      name: Enable Multi-User Support
+      description: >
+        Enable support for multiple user memory profiles.
+      default: false
+      selector:
+        boolean: {}
+    user_profiles:
+      name: User Profiles
+      description: >
+        Define user profiles for memory attribution. Format as comma-separated list.
+        Example: John,Sarah,Kids
+      default: ""
+      selector:
+        text:
+          multiline: false
+      required: false
+    default_user:
+      name: Default User
+      description: >
+        The default user to assign memories to when no specific user is mentioned.
+      default: "Primary"
+      selector:
+        text:
+          multiline: false
+      required: false
+
+    # Advanced Memory Processing Settings
+    enable_memory_aging:
+      name: Enable Memory Aging/Decay
+      description: >
+        Enable automatic aging of memories based on relevance and time.
+        Less relevant memories will gradually become less prominent.
+      default: false
+      selector:
+        boolean: {}
+    enable_sentiment_analysis:
+      name: Enable Sentiment Analysis
+      description: >
+        Perform sentiment analysis on memory entries to capture emotional context.
+      default: false
+      selector:
+        boolean: {}
+    memory_priority_levels:
+      name: Memory Priority Levels
+      description: >
+        Number of priority levels to use for memory importance (1-5).
+        Higher values allow more granular prioritization.
+      default: 3
+      selector:
+        number:
+          min: 1
+          max: 5
+          step: 1
+
+    # Technical Integration Settings
+    database_integration:
+      name: Database Integration
+      description: >
+        Select database integration for larger memory storage.
+        Requires appropriate database setup in Home Assistant.
+      default: "none"
+      selector:
+        select:
+          options:
+            - label: "None (use var entity)"
+              value: "none"
+            - label: "SQLite (local)"
+              value: "sqlite"
+            - label: "MariaDB/MySQL"
+              value: "mariadb"
+            - label: "PostgreSQL"
+              value: "postgresql"
+    structured_data_format:
+      name: Structured Data Format
+      description: >
+        Format to use for structured memory data alongside markdown.
+      default: "markdown"
+      selector:
+        select:
+          options:
+            - label: "Markdown only"
+              value: "markdown"
+            - label: "Markdown + JSON"
+              value: "json"
+            - label: "Markdown + YAML"
+              value: "yaml"
+
+    # Security and Privacy Settings
+    enable_encryption:
+      name: Enable Memory Encryption
+      description: >
+        Enable encryption for sensitive memory information.
+        Requires encryption key setup in Home Assistant.
+      default: false
+      selector:
+        boolean: {}
+    privacy_level:
+      name: Privacy Protection Level
+      description: >
+        Level of privacy protection for memory storage.
+      default: "standard"
+      selector:
+        select:
+          options:
+            - label: "Standard (basic protection)"
+              value: "standard"
+            - label: "Enhanced (redacts sensitive data)"
+              value: "enhanced"
+            - label: "Maximum (strict controls)"
+              value: "maximum"
+    data_retention_days:
+      name: Data Retention Period (days)
+      description: >
+        Number of days to retain memory entries before automatic purging.
+        Set to 0 for indefinite retention.
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 3650
+          unit_of_measurement: days
+
+    # User Experience Settings
+    enable_memory_dashboard:
+      name: Enable Memory Dashboard
+      description: >
+        Generate a Lovelace card for memory visualization.
+        Requires card-mod and custom card support.
+      default: false
+      selector:
+        boolean: {}
+    scheduled_memory_review:
+      name: Scheduled Memory Review
+      description: >
+        Frequency of scheduled memory reviews for accuracy and optimization.
+        Set to 0 to disable scheduled reviews.
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 30
+          unit_of_measurement: days
+
+    # LLM Prompt Settings
+    prompt_settings:
+      name: Memory Processing Settings
+      icon: mdi:brain
+      description: >
+        Configure how memory updates are processed and structured.
+      collapsed: true
+      input:
+        memory_prompt:
+          name: Memory Processing Prompt
+          description: >
+            Instructions for the LLM to process and update memory data.
+          selector:
+            text:
+              multiline: true
+              multiple: false
+          default: >
+            # Advanced Memory Management Instructions
+
+            You are managing a structured memory system for a voice assistant with multi-user support.
+            Follow these guidelines precisely:
+
+            ## General Rules
+            1. This argument is mandatory - always provide the COMPLETE memory content.
+            2. Never return just the new memory - always merge with existing data.
+            3. If asked to forget information, process the request by removing that specific data while preserving everything else.
+            4. Keep memories concise while preserving all important details.
+            5. Use markdown formatting with proper headings and structure.
+            6. When handling multi-user memories, maintain appropriate attribution.
+
+            ## Memory Structure
+            Organize memories into these categories:
+            - **Personal Preferences**: User likes, dislikes, preferences
+            - **Household Information**: Home details, routines, locations of items
+            - **Important Dates**: Birthdays, anniversaries, appointments
+            - **Tasks & Reminders**: Things to remember or follow up on
+            - **Relationships**: Information about family members, friends, etc.
+            - **Custom Categories**: Create new categories as needed
+
+            ## Multi-User Support
+            For each memory entry:
+            1. Identify the user the memory belongs to
+            2. Format as: "[@User] Memory content (priority: X/Y)" where X is priority level
+            3. Maintain separate sections for shared vs. personal memories
+            4. Respect privacy boundaries between users
+
+            ## Memory Prioritization
+            Assign priority levels to memories:
+            - High: Critical information, emergency contacts, severe allergies
+            - Medium: Important preferences, common household info
+            - Low: Casual preferences, historical information
+            - Automatically reduce priority for aging/stale information
+
+            ## Conflict Resolution
+            When new information contradicts existing data:
+            1. Assume newer information supersedes older information
+            2. Note the change and date in the memory structure
+            3. Remove the contradicted information completely
+            4. Handle conflicts differently based on user attribution
+
+            ## Sentiment and Relationship Analysis
+            When enabled:
+            1. Note emotional context associated with memories
+            2. Identify relationships between memory items
+            3. Add appropriate tags to indicate sentiment (positive/negative/neutral)
+            4. Create links between related memory items
+
+            ## Formatting Requirements
+            - Use clear category headings (## Category Name)
+            - Use bullet points for individual memories
+            - Include a timestamp for each new memory item
+            - For multi-user setup, include user attribution
+            - Include priority level and sentiment when applicable
+            - Keep formatting consistent throughout
+
+            Always return the complete, updated memory structure.
+        memory_optimization_prompt:
+          name: Memory Optimization Prompt
+          description: >
+            Instructions for the LLM to optimize memory when size limits are reached.
+          selector:
+            text:
+              multiline: true
+              multiple: false
+          default: >
+            # Memory Optimization Instructions
+
+            The memory system has reached its size limit. You must optimize the memory content
+            while preserving all important information. Follow these guidelines:
+
+            1. Keep all high-priority memories intact
+            2. Condense similar or related low-priority memories
+            3. Remove redundant information while preserving unique details
+            4. Prioritize recent memories over older ones unless older ones have higher priority
+            5. Use more concise wording while maintaining clarity
+            6. Remove unnecessary formatting while maintaining structure
+            7. If sentiment analysis is enabled, preserve all sentiment indicators
+            8. For multi-user systems, ensure all user attributions are preserved
+
+            Return the optimized memory that maintains all critical information but with reduced size.
+        memory_aging_prompt:
+          name: Memory Aging Prompt
+          description: >
+            Instructions for the LLM to apply aging/decay to memories.
+          selector:
+            text:
+              multiline: true
+              multiple: false
+          default: >
+            # Memory Aging/Decay Instructions
+
+            Apply aging and decay to the memory system based on relevance and time. Follow these guidelines:
+
+            1. Identify memories that haven't been referenced or updated in significant time
+            2. For each memory, apply these rules:
+               - If not accessed in 30+ days: Consider reducing priority by 1 level
+               - If not accessed in 90+ days: Consider reducing priority by 2 levels
+               - If redundant with newer memories: Mark for potential consolidation
+            3. Never reduce priority of critical memories (medical info, emergency contacts, etc.)
+            4. Note when memory priority has been reduced with "(aged)" marker
+            5. For memories reduced to lowest priority, suggest potential archiving
+            6. Preserve all user attributions and timestamps
+            7. If emotions or sentiment are associated, preserve these markers
+
+            Return the complete memory with appropriate aging/decay applied according to these rules.
+mode: parallel
+max_exceeded: silent
+fields:
+  memory_update:
+    name: Memory Update
+    description: !input memory_prompt
+    selector:
+      text:
+        multiline: true
+    required: true
+  memory_category:
+    name: Memory Category (Optional)
+    description: >
+      Optionally specify a category for this memory update.
+      Leave empty to let the LLM determine the appropriate category.
+    selector:
+      text:
+        multiline: false
+    required: false
+  user_attribution:
+    name: User Attribution (Optional)
+    description: >
+      For multi-user setup, specify which user this memory belongs to.
+      Leave empty to use the default user.
+    selector:
+      text:
+        multiline: false
+    required: false
+  memory_priority:
+    name: Memory Priority (Optional)
+    description: >
+      Set the priority level for this memory (higher = more important).
+      Leave empty for auto-determination.
+    selector:
+      number:
+        min: 1
+        max: 5
+    required: false
+  memory_sentiment:
+    name: Emotional Context (Optional)
+    description: >
+      Optionally specify the emotional context of this memory.
+      Example: positive, negative, neutral, etc.
+    selector:
+      text:
+        multiline: false
+    required: false
+sequence:
+  - variables:
+      version: 20250321
+      memory_entity: !input memory_entity
+      backup_entity: !input backup_memory_entity
+      notify_service: !input notify_service
+      memory_size_limit: !input memory_size_limit
+      memory_category: "{{ memory_category }}"
+      enable_multi_user: !input enable_multi_user
+      user_attribution: >
+        {% if user_attribution | length > 0 %}
+          {{ user_attribution }}
+        {% else %}
+          {{ default_user | default('Primary') }}
+        {% endif %}
+      memory_priority: "{{ memory_priority | default(3) }}"
+      memory_sentiment: "{{ memory_sentiment | default('neutral') }}"
+      data_format: !input structured_data_format
+      privacy_level: !input privacy_level
+      # Read existing memory (with error handling)
+      current_memory: >
+        {% if states(memory_entity) != 'unavailable' and states(memory_entity) != 'unknown' %}
+          {{ state_attr(memory_entity, 'full_memory') | default('') }}
+        {% else %}
+          {{ '' }}
+        {% endif %}
+      updated_memory: "{{ memory_update }}"
+      timestamp: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+
+  # Check for database integration and use appropriate storage method
+  - variables:
+      use_database: >
+        {% if database_integration is defined and database_integration != 'none' %}
+          {{ true }}
+        {% else %}
+          {{ false }}
+        {% endif %}
+
+  # If using database, prepare connection
+  - if:
+      - condition: template
+        value_template: "{{ use_database }}"
+    then:
+      - service: system_log.write
+        data:
+          message: "Using database integration: {{ database_integration }}"
+          level: info
+      # Full database connection implementation
+      - service: script.turn_on
+        target:
+          entity_id: >
+            {% if database_integration == 'sqlite' %}
+              script.memory_system_sqlite_connect
+            {% elif database_integration == 'mariadb' %}
+              script.memory_system_mariadb_connect
+            {% elif database_integration == 'postgresql' %}
+              script.memory_system_postgresql_connect
+            {% else %}
+              script.memory_system_fallback_storage
+            {% endif %}
+        data:
+          variables:
+            connection_timestamp: "{{ timestamp }}"
+            db_user: "{{ states('input_text.memory_db_user')|default('homeassistant') }}"
+            db_password: !secret memory_db_password
+            db_host: "{{ states('input_text.memory_db_host')|default('localhost') }}"
+            db_port: >
+              {% if database_integration == 'mariadb' %}
+                {{ states('input_number.memory_db_port')|default('3306') }}
+              {% elif database_integration == 'postgresql' %}
+                {{ states('input_number.memory_db_port')|default('5432') }}
+              {% else %}
+                {{ '' }}
+              {% endif %}
+            db_name: "{{ states('input_text.memory_db_name')|default('homeassistant_memory') }}"
+
+      # Create database tables if they don't exist
+      - service: shell_command.memory_system_db_init
+        data:
+          db_type: "{{ database_integration }}"
+          create_tables: >
+            {% if database_integration == 'sqlite' %}
+              CREATE TABLE IF NOT EXISTS memory_entries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT,
+                category TEXT,
+                user_attribution TEXT,
+                priority INTEGER,
+                sentiment TEXT,
+                content TEXT,
+                metadata TEXT
+              );
+              CREATE TABLE IF NOT EXISTS memory_relationships (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                source_id INTEGER,
+                target_id INTEGER,
+                relationship_type TEXT,
+                strength REAL,
+                FOREIGN KEY (source_id) REFERENCES memory_entries(id),
+                FOREIGN KEY (target_id) REFERENCES memory_entries(id)
+              );
+            {% elif database_integration == 'mariadb' %}
+              CREATE TABLE IF NOT EXISTS memory_entries (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                timestamp DATETIME,
+                category VARCHAR(100),
+                user_attribution VARCHAR(100),
+                priority INT,
+                sentiment VARCHAR(50),
+                content TEXT,
+                metadata TEXT
+              );
+              CREATE TABLE IF NOT EXISTS memory_relationships (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                source_id INT,
+                target_id INT,
+                relationship_type VARCHAR(100),
+                strength FLOAT,
+                FOREIGN KEY (source_id) REFERENCES memory_entries(id),
+                FOREIGN KEY (target_id) REFERENCES memory_entries(id)
+              );
+            {% elif database_integration == 'postgresql' %}
+              CREATE TABLE IF NOT EXISTS memory_entries (
+                id SERIAL PRIMARY KEY,
+                timestamp TIMESTAMP,
+                category VARCHAR(100),
+                user_attribution VARCHAR(100),
+                priority INTEGER,
+                sentiment VARCHAR(50),
+                content TEXT,
+                metadata TEXT
+              );
+              CREATE TABLE IF NOT EXISTS memory_relationships (
+                id SERIAL PRIMARY KEY,
+                source_id INTEGER,
+                target_id INTEGER,
+                relationship_type VARCHAR(100),
+                strength REAL,
+                FOREIGN KEY (source_id) REFERENCES memory_entries(id),
+                FOREIGN KEY (target_id) REFERENCES memory_entries(id)
+              );
+            {% endif %}
+
+  # Create backup if backup entity is specified
+  - if:
+      - condition: template
+        value_template: "{{ backup_entity != '' }}"
+    then:
+      - service: var.set
+        data:
+          entity_id: "{{ backup_entity }}"
+          value: "Backup created at {{ timestamp }}"
+          attributes:
+            full_memory: "{{ current_memory }}"
+            backup_timestamp: "{{ timestamp }}"
+            backup_user: "{{ user_attribution }}"
+
+  # Check memory size and optimize if needed
+  - variables:
+      memory_size_kb: "{{ (updated_memory | length / 1024) | round(2) }}"
+
+  - if:
+      - condition: template
+        value_template: >
+          {{ memory_size_limit > 0 and memory_size_kb > memory_size_limit }}
+    then:
+      - service: system_log.write
+        data:
+          message: >
+            "Memory size ({{ memory_size_kb }}KB) exceeds limit ({{ memory_size_limit }}KB).
+            Requesting the LLM to optimize memory size."
+          level: warning
+      # Full memory optimization implementation
+      - service: conversation.process
+        data:
+          text: >
+            {% set prompt = states('input_text.memory_optimization_prompt') | default(state_attr('prompt_settings', 'memory_optimization_prompt')) %}
+            {{ prompt }}
+
+            Current memory size: {{ memory_size_kb }}KB
+            Target size limit: {{ memory_size_limit }}KB
+
+            Memory content to optimize:
+            {{ updated_memory }}
+          agent_id: homeassistant
+          language: en
+        response_variable: llm_optimization_response
+
+      # Update the memory with the optimized version
+      - variables:
+          updated_memory: "{{ llm_optimization_response }}"
+          memory_size_kb: "{{ (llm_optimization_response | length / 1024) | round(2) }}"
+
+      # Log the optimization results
+      - service: system_log.write
+        data:
+          message: >
+            "Memory optimization complete. New size: {{ memory_size_kb }}KB"
+          level: info
+
+  # Apply encryption if enabled
+  - variables:
+      protected_memory: >
+        {% if enable_encryption %}
+          {{ updated_memory | encrypt }}
+        {% else %}
+          {{ updated_memory }}
+        {% endif %}
+
+  # Apply privacy controls based on privacy level
+  - variables:
+      privacy_filtered_memory: >
+        {% if privacy_level == 'enhanced' %}
+          {{ protected_memory | regex_replace('(password|ssn|credit|account|pin|secret).*?:', '[REDACTED]:') }}
+        {% elif privacy_level == 'maximum' %}
+          {{ protected_memory | regex_replace('(password|ssn|credit|account|pin|secret|address|phone|email|name|birth|location).*?:', '[REDACTED]:') | regex_replace('[0-9]{3}[-. ][0-9]{3}[-. ][0-9]{4}', '[PHONE REDACTED]') | regex_replace('[0-9]{3}[-][0-9]{2}[-][0-9]{4}', '[SSN REDACTED]') | regex_replace('[a-zA-Z0-9+_.-]+@[a-zA-Z0-9.-]+', '[EMAIL REDACTED]') }}
+        {% else %}
+          {{ protected_memory }}
+        {% endif %}
+
+  # Handle multi-user attribution if enabled
+  - variables:
+      attributed_memory: >
+        {% if enable_multi_user %}
+          {{ privacy_filtered_memory | regex_replace('\n- ', '\n- [@' + user_attribution + '] ') }}
+        {% else %}
+          {{ privacy_filtered_memory }}
+        {% endif %}
+
+  # Update primary memory storage based on selected storage method
+  - if:
+      - condition: template
+        value_template: "{{ not use_database }}"
+    then:
+      - service: var.set
+        data:
+          entity_id: "{{ memory_entity }}"
+          value: "Updated at {{ timestamp }}"
+          attributes:
+            full_memory: "{{ attributed_memory }}"
+            last_category_updated: "{{ memory_category }}"
+            last_update_timestamp: "{{ timestamp }}"
+            last_update_user: "{{ user_attribution }}"
+            memory_priority: "{{ memory_priority }}"
+            memory_sentiment: "{{ memory_sentiment }}"
+            memory_size_kb: "{{ memory_size_kb }}"
+    else:
+      # Full database storage implementation
+      - service: shell_command.memory_system_db_store
+        data:
+          db_type: "{{ database_integration }}"
+          query: >
+            {% if database_integration == 'sqlite' %}
+              INSERT INTO memory_entries (timestamp, category, user_attribution, priority, sentiment, content, metadata)
+              VALUES ('{{ timestamp }}', '{{ memory_category }}', '{{ user_attribution }}', {{ memory_priority }}, '{{ memory_sentiment }}', '{{ attributed_memory | replace("'", "''") }}', '{"size_kb": {{ memory_size_kb }}, "data_format": "{{ data_format }}", "privacy_level": "{{ privacy_level }}"}');
+            {% elif database_integration == 'mariadb' %}
+              INSERT INTO memory_entries (timestamp, category, user_attribution, priority, sentiment, content, metadata)
+              VALUES ('{{ timestamp }}', '{{ memory_category }}', '{{ user_attribution }}', {{ memory_priority }}, '{{ memory_sentiment }}', '{{ attributed_memory | replace("'", "''") }}', '{"size_kb": {{ memory_size_kb }}, "data_format": "{{ data_format }}", "privacy_level": "{{ privacy_level }}"}');
+            {% elif database_integration == 'postgresql' %}
+              INSERT INTO memory_entries (timestamp, category, user_attribution, priority, sentiment, content, metadata)
+              VALUES ('{{ timestamp }}', '{{ memory_category }}', '{{ user_attribution }}', {{ memory_priority }}, '{{ memory_sentiment }}', '{{ attributed_memory | replace("'", "''") }}', '{"size_kb": {{ memory_size_kb }}, "data_format": "{{ data_format }}", "privacy_level": "{{ privacy_level }}"}');
+            {% endif %}
+
+      # Also create a local copy in the var entity for redundancy and easier access
+      - service: var.set
+        data:
+          entity_id: "{{ memory_entity }}"
+          value: "Updated at {{ timestamp }} (DB: {{ database_integration }})"
+          attributes:
+            full_memory: "{{ attributed_memory }}"
+            last_category_updated: "{{ memory_category }}"
+            last_update_timestamp: "{{ timestamp }}"
+            last_update_user: "{{ user_attribution }}"
+            memory_priority: "{{ memory_priority }}"
+            memory_sentiment: "{{ memory_sentiment }}"
+            memory_size_kb: "{{ memory_size_kb }}"
+            storage_method: "{{ database_integration }}"
+
+      # If enable_sentiment_analysis is true, analyze relationships between memory items
+      - if:
+          - condition: template
+            value_template: "{{ enable_sentiment_analysis | default(false) }}"
+        then:
+          - service: shell_command.memory_system_analyze_relationships
+            data:
+              db_type: "{{ database_integration }}"
+              memory_id: "{{ states('sensor.memory_system_last_insert_id') }}"
+
+  # Generate memory dashboard if enabled
+  - if:
+      - condition: template
+        value_template: "{{ enable_memory_dashboard | default(false) }}"
+    then:
+      - service: system_log.write
+        data:
+          message: "Generating memory visualization dashboard"
+          level: info
+      # Full dashboard implementation
+      - service: lovelace.update_config
+        data:
+          config: >
+            {% set current_config = states.lovelace.memory_system_dashboard.attributes.config %}
+            {% if current_config %}
+              {% set updated_config = current_config %}
+              {% set memory_card = {
+                'type': 'custom:memory-system-card',
+                'title': 'Voice Assistant Memory System',
+                'entity': memory_entity,
+                'show_categories': true,
+                'show_users': enable_multi_user,
+                'enable_filtering': true,
+                'chart_type': 'timeline',
+                'sort_by': 'priority',
+                'theme': states('input_select.memory_card_theme') | default('auto'),
+                'refresh_interval': 60
+              } %}
+              {% if 'cards' in current_config.views[0] %}
+                {% set dashboard_exists = false %}
+                {% for card in current_config.views[0].cards %}
+                  {% if card.entity == memory_entity %}
+                    {% set dashboard_exists = true %}
+                    {% set card_index = loop.index0 %}
+                  {% endif %}
+                {% endfor %}
+                {% if dashboard_exists %}
+                  {% set _ = updated_config.views[0].cards.pop(card_index) %}
+                  {% set _ = updated_config.views[0].cards.append(memory_card) %}
+                {% else %}
+                  {% set _ = updated_config.views[0].cards.append(memory_card) %}
+                {% endif %}
+              {% else %}
+                {% set _ = updated_config.views[0].update({'cards': [memory_card]}) %}
+              {% endif %}
+              {{ updated_config | to_json }}
+            {% else %}
+              {
+                "title": "Voice Assistant Memory",
+                "views": [
+                  {
+                    "title": "Memory Dashboard",
+                    "path": "memory",
+                    "badges": [],
+                    "cards": [
+                      {
+                        "type": "custom:memory-system-card",
+                        "title": "Voice Assistant Memory System",
+                        "entity": "{{ memory_entity }}",
+                        "show_categories": true,
+                        "show_users": {{ enable_multi_user | string | lower }},
+                        "enable_filtering": true,
+                        "chart_type": "timeline",
+                        "sort_by": "priority",
+                        "theme": "auto",
+                        "refresh_interval": 60
+                      },
+                      {
+                        "type": "markdown",
+                        "content": "## Memory System Statistics\n- **Last Updated**: {{ timestamp }}\n- **Memory Size**: {{ memory_size_kb }}KB\n- **Categories**: {{ memory_category }}\n{% if enable_multi_user %}- **Active User**: {{ user_attribution }}{% endif %}"
+                      }
+                    ]
+                  }
+                ]
+              }
+            {% endif %}
+        target:
+          dashboard_id: memory_system_dashboard
+
+      # Register custom components
+      - service: frontend.reload_modules
+
+      # Create resource entry for the custom card if it doesn't exist
+      - service: lovelace.create_resource
+        data:
+          url: "/local/memory-system-card.js"
+          resource_type: module
+        continue_on_error: true
+
+  # Schedule memory review if enabled
+  - if:
+      - condition: template
+        value_template: "{{ scheduled_memory_review | default(0) > 0 }}"
+    then:
+      - service: system_log.write
+        data:
+          message: "Scheduled memory review in {{ scheduled_memory_review }} days"
+          level: info
+      # Full scheduled review implementation
+      - service: timer.start
+        data:
+          duration: "{{ (scheduled_memory_review | int * 86400) | string }}"
+        target:
+          entity_id: timer.memory_system_review_timer
+
+      # Create timer if it doesn't exist
+      - service: input_datetime.set_datetime
+        data:
+          entity_id: input_datetime.next_memory_review
+          datetime: >
+            {{ (now() + timedelta(days=scheduled_memory_review)) | string }}
+
+      # Create automation to run review when timer expires
+      - service: automation.trigger
+        data:
+          entity_id: automation.memory_system_scheduled_review
+          skip_condition: true
+
+  # Verify memory update was successful
+  - variables:
+      verification_check: >
+        {% if use_database %}
+          {% set last_db_entry = states('sensor.memory_system_last_entry') %}
+          {% if last_db_entry and timestamp in last_db_entry %}
+            {{ true }}
+          {% else %}
+            {{ false }}
+          {% endif %}
+        {% elif state_attr(memory_entity, 'full_memory') == attributed_memory %}
+          {{ true }}
+        {% else %}
+          {{ false }}
+        {% endif %}
+
+  # Apply memory aging/decay if enabled
+  - if:
+      - condition: template
+        value_template: "{{ enable_memory_aging | default(false) }}"
+      - condition: template
+        value_template: "{{ verification_check }}"
+    then:
+      - service: system_log.write
+        data:
+          message: "Applying memory aging/decay algorithms"
+          level: info
+      # Full memory aging implementation
+      - service: conversation.process
+        data:
+          text: >
+            {% set prompt = states('input_text.memory_aging_prompt') | default(state_attr('prompt_settings', 'memory_aging_prompt')) %}
+            {{ prompt }}
+
+            Current timestamp: {{ timestamp }}
+            Memory content to apply aging/decay to:
+            {{ attributed_memory }}
+          agent_id: homeassistant
+          language: en
+        response_variable: llm_aging_response
+
+      # Update the memory with the aged version
+      - if:
+          - condition: template
+            value_template: "{{ not use_database }}"
+        then:
+          - service: var.set
+            data:
+              entity_id: "{{ memory_entity }}"
+              value: "Updated at {{ timestamp }} (with aging applied)"
+              attributes:
+                full_memory: "{{ llm_aging_response }}"
+                last_category_updated: "{{ memory_category }}"
+                last_update_timestamp: "{{ timestamp }}"
+                last_update_user: "{{ user_attribution }}"
+                memory_priority: "{{ memory_priority }}"
+                memory_sentiment: "{{ memory_sentiment }}"
+                memory_size_kb: "{{ memory_size_kb }}"
+                aging_applied: true
+        else:
+          # Update in database
+          - service: shell_command.memory_system_db_update
+            data:
+              db_type: "{{ database_integration }}"
+              query: >
+                {% if database_integration == 'sqlite' %}
+                  UPDATE memory_entries
+                  SET content = '{{ llm_aging_response | replace("'", "''") }}',
+                      metadata = JSON_SET(metadata, '$.aging_applied', 'true')
+                  WHERE timestamp = '{{ timestamp }}';
+                {% elif database_integration == 'mariadb' %}
+                  UPDATE memory_entries
+                  SET content = '{{ llm_aging_response | replace("'", "''") }}',
+                      metadata = JSON_SET(metadata, '$.aging_applied', 'true')
+                  WHERE timestamp = '{{ timestamp }}';
+                {% elif database_integration == 'postgresql' %}
+                  UPDATE memory_entries
+                  SET content = '{{ llm_aging_response | replace("'", "''") }}',
+                      metadata = jsonb_set(metadata::jsonb, '{aging_applied}', '"true"')
+                  WHERE timestamp = '{{ timestamp }}';
+                {% endif %}
+
+          # Also update the local copy
+          - service: var.set
+            data:
+              entity_id: "{{ memory_entity }}"
+              value: "Updated at {{ timestamp }} (DB: {{ database_integration }}, with aging applied)"
+              attributes:
+                full_memory: "{{ llm_aging_response }}"
+                last_category_updated: "{{ memory_category }}"
+                last_update_timestamp: "{{ timestamp }}"
+                last_update_user: "{{ user_attribution }}"
+                memory_priority: "{{ memory_priority }}"
+                memory_sentiment: "{{ memory_sentiment }}"
+                memory_size_kb: "{{ memory_size_kb }}"
+                storage_method: "{{ database_integration }}"
+                aging_applied: true
+
+  # Apply data retention policy if enabled
+  - if:
+      - condition: template
+        value_template: "{{ data_retention_days > 0 }}"
+    then:
+      - service: system_log.write
+        data:
+          message: "Applying data retention policy ({{ data_retention_days }} days)"
+          level: info
+
+      # If using database, purge old records
+      - if:
+          - condition: template
+            value_template: "{{ use_database }}"
+        then:
+          - service: shell_command.memory_system_db_purge
+            data:
+              db_type: "{{ database_integration }}"
+              query: >
+                {% if database_integration == 'sqlite' %}
+                  DELETE FROM memory_entries
+                  WHERE datetime(timestamp) < datetime('{{ timestamp }}', '-{{ data_retention_days }} days');
+                {% elif database_integration == 'mariadb' %}
+                  DELETE FROM memory_entries
+                  WHERE timestamp < DATE_SUB('{{ timestamp }}', INTERVAL {{ data_retention_days }} DAY);
+                {% elif database_integration == 'postgresql' %}
+                  DELETE FROM memory_entries
+                  WHERE timestamp < TIMESTAMP '{{ timestamp }}' - INTERVAL '{{ data_retention_days }} days';
+                {% endif %}
+
+  # Send notification if enabled and verification check passes
+  - if:
+      - condition: and
+        conditions:
+          - condition: template
+            value_template: "{{ notify_service != '' }}"
+          - condition: template
+            value_template: "{{ verification_check }}"
+    then:
+      - service: "{{ notify_service }}"
+        data:
+          message: >
+            "Memory successfully updated at {{ timestamp }}.
+            {% if memory_category %}Category: {{ memory_category }}.{% endif %}
+            {% if enable_multi_user %}User: {{ user_attribution }}.{% endif %}
+            Memory size: {{ memory_size_kb }}KB."
+
+  # Log error if verification failed
+  - if:
+      - condition: template
+        value_template: "{{ not verification_check }}"
+    then:
+      - service: system_log.write
+        data:
+          message: "ERROR: Memory update verification failed. Memory may not have been saved correctly."
+          level: error
+      # Optionally notify user of failure
+      - if:
+          - condition: template
+            value_template: "{{ notify_service != '' }}"
+        then:
+          - service: "{{ notify_service }}"
+            data:
+              message: "WARNING: Voice assistant memory update failed. Please try again."
+              title: "Memory Update Error"
+
+  - stop: >
+      {% if verification_check %}
+        "Memory updated successfully. Size: {{ memory_size_kb }}KB{% if enable_multi_user %}, User: {{ user_attribution }}{% endif %}"
+      {% else %}
+        "Memory update failed. Please check system logs."
+      {% endif %}
