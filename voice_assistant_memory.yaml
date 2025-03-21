@@ -476,7 +476,7 @@ sequence:
           variables:
             connection_timestamp: "{{ timestamp }}"
             db_user: "{{ states('input_text.memory_db_user')|default('homeassistant') }}"
-            db_password: !secret memory_db_password
+            db_password: "{{states('input_text.db_password')}}"
             db_host: "{{ states('input_text.memory_db_host')|default('localhost') }}"
             db_port: >
               {% if database_integration == 'mariadb' %}
